@@ -1,1 +1,608 @@
-*{box-sizing:border-box}body{margin:0;background:#f4f6fa;color:#172033;font:14px Inter,system-ui,Arial}aside{position:fixed;left:0;top:0;bottom:0;width:240px;background:#111827;color:white;padding:24px 16px}.brand{display:flex;gap:10px;align-items:center;margin-bottom:30px}.brand>b{display:grid;place-items:center;width:38px;height:38px;background:#3154df;border-radius:10px}.brand small{display:block;color:#9ca3af;font-size:10px;margin-top:3px}nav{display:grid;gap:6px}nav button{border:0;background:transparent;color:#cbd5e1;text-align:left;padding:12px;border-radius:8px;cursor:pointer}nav button.active,nav button:hover{background:#1f2937;color:#fff}.note{position:absolute;bottom:20px;left:16px;right:16px;background:#1b2434;border:1px solid #2b3546;border-radius:10px;padding:12px;color:#9ca3af;font-size:11px}.note b{color:#fff}.main{}main{margin-left:240px;padding:30px 36px}header{display:flex;justify-content:space-between;align-items:start;margin-bottom:24px}header small,.panel>small{letter-spacing:1.3px;font-weight:800;color:#71809b;font-size:10px}h1{font-size:30px;margin:5px 0}h2{font-size:19px;margin:7px 0 18px}header p{color:#6b7280;margin:0}header button,.filters button{background:#2447d8;color:#fff;border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}.page{display:none}.page.active{display:block}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}.card,.panel{background:#fff;border:1px solid #e4e7ec;border-radius:13px;box-shadow:0 8px 25px #1720330b}.card{padding:18px}.card span{display:block;color:#6b7280;font-size:11px}.card b{font-size:22px;display:block;margin-top:9px}.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:18px}.panel{padding:20px;margin-bottom:18px}.bar{display:grid;grid-template-columns:150px 1fr 40px;gap:10px;align-items:center;margin:15px 0;font-size:11px}.track{height:12px;background:#edf0f5;border-radius:20px;overflow:hidden}.fill{height:100%;background:#2447d8}.risk{display:flex;gap:10px;flex-wrap:wrap}.riskbox{padding:14px;border-radius:10px;min-width:90px;background:#eef1f7}.riskbox b{font-size:20px}.monthly{display:flex;height:210px;align-items:end;gap:8px;border-bottom:1px solid #ddd}.monthcol{flex:1;display:flex;align-items:end;justify-content:center;height:100%}.monthbar{width:70%;background:#2447d8;border-radius:5px 5px 0 0;min-height:3px}.filters{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.filters input,.filters select{padding:10px;border:1px solid #dfe3ea;border-radius:8px;background:#fff}.filters input{min-width:250px}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #edf0f3;font-size:12px}th{color:#6b7280;font-size:10px}.badge{padding:5px 8px;border-radius:20px;font-size:10px;font-weight:800}.high{background:#fde7e9;color:#bd3342}.medium{background:#fff2d5;color:#a36b00}.low{background:#e6f6ee;color:#19734a}.view{border:0;background:none;color:#2447d8;font-weight:700;cursor:pointer}.modal{position:fixed;inset:0;background:#11182777;display:grid;place-items:center;padding:20px}.hidden{display:none}.modalbox{background:#fff;border-radius:14px;padding:25px;width:min(700px,100%);position:relative;max-height:85vh;overflow:auto}.modalbox>#close{position:absolute;right:15px;top:10px;border:0;background:none;font-size:28px;cursor:pointer}.details{display:grid;grid-template-columns:1fr 1fr;gap:10px}.detail{padding:11px;border:1px solid #e5e7eb;border-radius:8px}.detail small{display:block;color:#6b7280}.detail b{display:block;margin-top:4px}@media(max-width:1000px){.cards{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr}}@media(max-width:700px){aside{position:static;width:auto}.note{display:none}main{margin:0;padding:20px}header{flex-direction:column;gap:15px}.cards{grid-template-columns:1fr 1fr}.details{grid-template-columns:1fr}}
+/* -------------------- 1. GLOBAL RESET -------------------- */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #f4f6fa;
+    color: #172033;
+    font: 14px Inter, system-ui, Arial, sans-serif;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.hidden {
+    display: none !important;
+}
+
+
+/* -------------------- 2. SIDEBAR -------------------- */
+
+aside {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 240px;
+    padding: 24px 16px;
+    background: #111827;
+    color: #fff;
+    z-index: 10;
+}
+
+
+/* Brand */
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.brand > b {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    background: #3154df;
+    border-radius: 10px;
+}
+
+.brand small {
+    display: block;
+    margin-top: 3px;
+    color: #9ca3af;
+    font-size: 10px;
+}
+
+
+/* Sidebar navigation */
+
+nav {
+    display: grid;
+    gap: 6px;
+}
+
+nav button {
+    padding: 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #cbd5e1;
+    text-align: left;
+    transition: background 0.2s, color 0.2s;
+}
+
+nav button.active,
+nav button:hover {
+    background: #1f2937;
+    color: #fff;
+}
+
+nav button:focus-visible {
+    outline: 2px solid #93a8ff;
+    outline-offset: 2px;
+}
+
+
+/* Sidebar note */
+
+.note {
+    position: absolute;
+    right: 16px;
+    bottom: 20px;
+    left: 16px;
+    padding: 12px;
+    border: 1px solid #2b3546;
+    border-radius: 10px;
+    background: #1b2434;
+    color: #9ca3af;
+    font-size: 11px;
+}
+
+.note b {
+    color: #fff;
+}
+
+
+/* -------------------- 3. MAIN CONTENT -------------------- */
+
+main {
+    margin-left: 240px;
+    padding: 30px 36px;
+}
+
+
+/* Page header */
+
+header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+header small,
+.panel > small {
+    color: #71809b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+}
+
+h1 {
+    margin: 5px 0;
+    font-size: 30px;
+}
+
+h2 {
+    margin: 7px 0 18px;
+    font-size: 19px;
+}
+
+header p {
+    margin: 0;
+    color: #6b7280;
+}
+
+
+/* Primary buttons */
+
+header button,
+.filters button {
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 8px;
+    background: #2447d8;
+    color: #fff;
+    font-weight: 700;
+    transition: background 0.2s;
+}
+
+header button:hover,
+.filters button:hover {
+    background: #1938b5;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+
+/* -------------------- 4. PAGE NAVIGATION -------------------- */
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+
+/* -------------------- 5. SUMMARY CARDS -------------------- */
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.card,
+.panel {
+    border: 1px solid #e4e7ec;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 8px 25px #1720330b;
+}
+
+.card {
+    min-width: 0;
+    padding: 18px;
+}
+
+.card span {
+    display: block;
+    color: #6b7280;
+    font-size: 11px;
+}
+
+.card b {
+    display: block;
+    margin-top: 9px;
+    font-size: 22px;
+    overflow-wrap: anywhere;
+}
+
+
+/* -------------------- 6. DASHBOARD GRID -------------------- */
+
+.grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 18px;
+}
+
+.panel {
+    min-width: 0;
+    margin-bottom: 18px;
+    padding: 20px;
+}
+
+
+/* -------------------- 7. EXCEPTION BAR CHART -------------------- */
+
+.bar {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr) 40px;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0;
+    font-size: 11px;
+}
+
+.track {
+    height: 12px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: #edf0f5;
+}
+
+.fill {
+    height: 100%;
+    border-radius: inherit;
+    background: #2447d8;
+    transition: width 0.3s ease;
+}
+
+
+/* -------------------- 8. RISK DISTRIBUTION -------------------- */
+
+.risk {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.riskbox {
+    min-width: 90px;
+    padding: 14px;
+    border-radius: 10px;
+    background: #eef1f7;
+}
+
+.riskbox b {
+    font-size: 20px;
+}
+
+
+/* Risk badges */
+
+.badge {
+    display: inline-block;
+    padding: 5px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.badge.high {
+    background: #fde7e9;
+    color: #bd3342;
+}
+
+.badge.medium {
+    background: #fff2d5;
+    color: #a36b00;
+}
+
+.badge.low {
+    background: #e6f6ee;
+    color: #19734a;
+}
+
+
+/* -------------------- 9. MONTHLY TRANSACTION CHART -------------------- */
+
+.monthly {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 210px;
+    border-bottom: 1px solid #ddd;
+}
+
+.monthcol {
+    display: flex;
+    flex: 1;
+    align-items: flex-end;
+    justify-content: center;
+    min-width: 0;
+    height: 100%;
+}
+
+.monthbar {
+    width: 70%;
+    min-height: 3px;
+    border-radius: 5px 5px 0 0;
+    background: #2447d8;
+    transition: height 0.3s ease;
+}
+
+
+/* -------------------- 10. FILTERS -------------------- */
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.filters input,
+.filters select {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #dfe3ea;
+    border-radius: 8px;
+    background: #fff;
+    color: #172033;
+}
+
+.filters input {
+    min-width: 250px;
+}
+
+.filters input:focus,
+.filters select:focus {
+    border-color: #2447d8;
+    outline: 2px solid #2447d826;
+}
+
+
+/* -------------------- 11. TRANSACTION TABLES -------------------- */
+
+.tablewrap {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 11px 9px;
+    border-bottom: 1px solid #edf0f3;
+    text-align: left;
+    font-size: 12px;
+}
+
+th {
+    color: #6b7280;
+    font-size: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+tbody tr:hover {
+    background: #f8faff;
+}
+
+
+/* View transaction button */
+
+.view {
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    color: #2447d8;
+    font-weight: 700;
+}
+
+.view:hover {
+    text-decoration: underline;
+}
+
+.view:focus-visible {
+    outline: 2px solid #2447d8;
+    outline-offset: 3px;
+}
+
+
+/* -------------------- 12. TRANSACTION MODAL -------------------- */
+
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: #11182777;
+}
+
+.modalbox {
+    position: relative;
+    width: min(700px, 100%);
+    max-height: 85vh;
+    overflow: auto;
+    padding: 25px;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 20px 60px #0002;
+}
+
+
+/* Modal close button */
+
+.modalbox > #close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    border: 0;
+    background: none;
+    font-size: 28px;
+    line-height: 1;
+}
+
+
+/* Transaction details */
+
+.details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.detail {
+    min-width: 0;
+    padding: 11px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+
+.detail small {
+    display: block;
+    color: #6b7280;
+    text-transform: capitalize;
+}
+
+.detail b {
+    display: block;
+    margin-top: 4px;
+}
+
+
+/* -------------------- 13. ERROR MESSAGE -------------------- */
+
+#errorMessage {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border: 1px solid #f3b7bd;
+    border-radius: 8px;
+    background: #fde7e9;
+    color: #9f2432;
+}
+
+
+/* -------------------- 14. TABLET RESPONSIVENESS -------------------- */
+
+@media (max-width: 1000px) {
+    .cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    main {
+        padding: 24px;
+    }
+}
+
+
+/* -------------------- 15. MOBILE RESPONSIVENESS -------------------- */
+
+@media (max-width: 700px) {
+    aside {
+        position: static;
+        width: 100%;
+        height: auto;
+    }
+
+    nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .note {
+        display: none;
+    }
+
+    main {
+        margin: 0;
+        padding: 20px 14px;
+    }
+
+    header {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    h1 {
+        font-size: 25px;
+    }
+
+    .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .card {
+        padding: 14px;
+    }
+
+    .card b {
+        font-size: 18px;
+    }
+
+    .filters {
+        flex-direction: column;
+    }
+
+    .filters input,
+    .filters select,
+    .filters button {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .bar {
+        grid-template-columns: 90px minmax(0, 1fr) 30px;
+        gap: 7px;
+    }
+
+    .details {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .panel {
+        padding: 14px;
+    }
+}
+
+
+/* -------------------- 16. SMALL MOBILE SCREENS -------------------- */
+
+@media (max-width: 380px) {
+    .cards {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    nav {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .riskbox {
+        flex: 1;
+    }
+}
