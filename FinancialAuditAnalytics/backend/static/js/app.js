@@ -1,1 +1,526 @@
-const $=s=>document.querySelector(s);const money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n||0));async function api(u,o){let r=await fetch(u,o);if(!r.ok)throw Error((await r.json()).error||'Request failed');return r.json()}function badge(x){return `<span class="badge ${String(x).toLowerCase()}">${x}</span>`}async function dashboard(){let [s,e,m]=await Promise.all([api('/api/summary'),api('/api/exceptions'),api('/api/monthly')]);$('#cards').innerHTML=[['Transactions',s.total_transactions.toLocaleString('en-IN')],['Transaction Value',money(s.total_value)],['Potential Exceptions',s.potential_exceptions],['High Risk',s.high_risk_transactions],['Average Transaction',money(s.average_transaction)]].map(x=>`<div class="card"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');let mx=Math.max(...e.types.map(x=>x.count),1);$('#exceptionsChart').innerHTML=e.types.map(x=>`<div class="bar"><span>${x.name}</span><div class="track"><div class="fill" style="width:${x.count/mx*100}%"></div></div><b>${x.count}</b></div>`).join('');$('#riskChart').innerHTML='<div class="risk">'+e.risk.map(x=>`<div class="riskbox"><b>${x.count}</b><br>${badge(x.name)}</div>`).join('')+'</div>';let mm=Math.max(...m.map(x=>x.total_value),1);$('#monthlyChart').innerHTML=m.map(x=>`<div class="monthcol" title="${x.month}: ${money(x.total_value)}"><div class="monthbar" style="height:${Math.max(3,x.total_value/mm*180)}px"></div></div>`).join('')}async function departments(){let ds=await api('/api/departments');for(let id of ['#edept','#tdept'])ds.forEach(d=>$(id).insertAdjacentHTML('beforeend',`<option>${d}</option>`))}function row(x,exception=false){return `<tr><td>${x.Transaction_ID}</td>${exception?`<td>${x.Vendor_Name}</td><td>${money(x.Amount)}</td><td>${x.Exception_Type}</td>`:`<td>${x.Transaction_Date}</td><td>${x.Vendor_Name}</td><td>${x.Department}</td><td>${money(x.Amount)}</td>`}<td>${badge(x.Risk_Level)}</td><td>${Number(x.Risk_Score).toFixed(0)}</td><td><button class="view" onclick="openTx('${x.Transaction_ID}')">View</button></td></tr>`}async function loadTable(target,filters,exception){let p=new URLSearchParams(filters);let d=await api('/api/transactions?'+p);$(target).innerHTML=d.map(x=>row(x,exception)).join('')}window.openTx=async id=>{let x=await api('/api/transactions/'+id);$('#mtitle').textContent=x.Transaction_ID;$('#mbody').innerHTML=Object.entries(x).map(([k,v])=>`<div class="detail"><small>${k.replaceAll('_',' ')}</small><b>${k==='Amount'?money(v):v??'-'}</b></div>`).join('');$('#modal').classList.remove('hidden')};document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('#'+b.dataset.page).classList.add('active')});$('#efilter').onclick=()=>loadTable('#etable',{search:$('#esearch').value,risk:$('#erisk').value,department:$('#edept').value},true);$('#tfilter').onclick=()=>loadTable('#ttable',{search:$('#tsearch').value,risk:$('#trisk').value,department:$('#tdept').value},false);$('#close').onclick=()=>$('#modal').classList.add('hidden');$('#modal').onclick=e=>{if(e.target.id==='modal')$('#modal').classList.add('hidden')};$('#regen').onclick=async()=>{await api('/api/regenerate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:10000})});await init()};async function vendors(){let d=await api('/api/vendors');$('#vtable').innerHTML=d.map(x=>`<tr><td>${x.Vendor_ID}</td><td>${x.Vendor_Name}</td><td>${x.Transaction_Count}</td><td>${money(x.Total_Amount)}</td></tr>`).join('')}async function init(){await dashboard();await departments();await loadTable('#etable',{},true);await loadTable('#ttable',{},false);await vendors()}init();
+/* -------------------- 1. UTILITIES -------------------- */
+
+const $ = (selector) => document.querySelector(selector);
+
+const money = (value) =>
+    new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+    }).format(Number(value || 0));
+
+const escapeHTML = (value) =>
+    String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+    })[char]);
+
+function badge(value) {
+    const label = String(value ?? "-");
+    const className = label.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+
+    return `
+        <span class="badge ${className}">
+            ${escapeHTML(label)}
+        </span>
+    `;
+}
+
+function showError(error) {
+    console.error("Dashboard error:", error);
+
+    let errorBox = $("#errorMessage");
+
+    if (!errorBox) {
+        errorBox = document.createElement("div");
+        errorBox.id = "errorMessage";
+        errorBox.setAttribute("role", "alert");
+        document.body.prepend(errorBox);
+    }
+
+    errorBox.textContent =
+        error.message || "Something went wrong. Please try again.";
+}
+
+function clearError() {
+    const errorBox = $("#errorMessage");
+
+    if (errorBox) {
+        errorBox.remove();
+    }
+}
+
+
+/* -------------------- 2. API SERVICE -------------------- */
+
+async function api(url, options = {}) {
+    const response = await fetch(url, options);
+
+    let data;
+
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(
+            response.ok
+                ? "The server returned an invalid response."
+                : `Request failed with status ${response.status}.`
+        );
+    }
+
+    if (!response.ok) {
+        throw new Error(data.error || "Request failed.");
+    }
+
+    return data;
+}
+
+
+/* -------------------- 3. DASHBOARD SUMMARY -------------------- */
+
+async function loadDashboardSummary() {
+    const summary = await api("/api/summary");
+
+    const cards = [
+        {
+            label: "Transactions",
+            value: Number(summary.total_transactions || 0)
+                .toLocaleString("en-IN"),
+        },
+        {
+            label: "Transaction Value",
+            value: money(summary.total_value),
+        },
+        {
+            label: "Potential Exceptions",
+            value: Number(summary.potential_exceptions || 0)
+                .toLocaleString("en-IN"),
+        },
+        {
+            label: "High Risk",
+            value: Number(summary.high_risk_transactions || 0)
+                .toLocaleString("en-IN"),
+        },
+        {
+            label: "Average Transaction",
+            value: money(summary.average_transaction),
+        },
+    ];
+
+    $("#cards").innerHTML = cards
+        .map((card) => `
+            <div class="card">
+                <span>${escapeHTML(card.label)}</span>
+                <b>${escapeHTML(card.value)}</b>
+            </div>
+        `)
+        .join("");
+}
+
+
+/* -------------------- 4. EXCEPTION CHART -------------------- */
+
+function renderExceptionsChart(types) {
+    const container = $("#exceptionsChart");
+
+    if (!types.length) {
+        container.textContent = "No exception data available.";
+        return;
+    }
+
+    const maxCount = Math.max(
+        ...types.map((item) => Number(item.count || 0)),
+        1
+    );
+
+    container.innerHTML = types
+        .map((item) => {
+            const count = Number(item.count || 0);
+            const width = (count / maxCount) * 100;
+
+            return `
+                <div class="bar">
+                    <span>${escapeHTML(item.name)}</span>
+
+                    <div class="track">
+                        <div
+                            class="fill"
+                            style="width: ${width}%"
+                        ></div>
+                    </div>
+
+                    <b>${count}</b>
+                </div>
+            `;
+        })
+        .join("");
+}
+
+
+/* -------------------- 5. RISK CHART -------------------- */
+
+function renderRiskChart(riskData) {
+    const container = $("#riskChart");
+
+    if (!riskData.length) {
+        container.textContent = "No risk data available.";
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="risk">
+            ${riskData.map((item) => `
+                <div class="riskbox">
+                    <b>${Number(item.count || 0)}</b>
+                    <br>
+                    ${badge(item.name)}
+                </div>
+            `).join("")}
+        </div>
+    `;
+}
+
+
+/* -------------------- 6. MONTHLY TRANSACTION CHART -------------------- */
+
+function renderMonthlyChart(monthlyData) {
+    const container = $("#monthlyChart");
+
+    if (!monthlyData.length) {
+        container.textContent = "No monthly data available.";
+        return;
+    }
+
+    const maxValue = Math.max(
+        ...monthlyData.map((item) => Number(item.total_value || 0)),
+        1
+    );
+
+    container.innerHTML = monthlyData
+        .map((item) => {
+            const value = Number(item.total_value || 0);
+            const height = Math.max((value / maxValue) * 180, 3);
+
+            return `
+                <div
+                    class="monthcol"
+                    title="${escapeHTML(item.month)}: ${escapeHTML(money(value))}"
+                >
+                    <div
+                        class="monthbar"
+                        style="height: ${height}px"
+                    ></div>
+                </div>
+            `;
+        })
+        .join("");
+}
+
+
+/* -------------------- 7. LOAD ALL DASHBOARD CHARTS -------------------- */
+
+async function loadDashboard() {
+    const [exceptions, monthly] = await Promise.all([
+        api("/api/exceptions"),
+        api("/api/monthly"),
+        loadDashboardSummary(),
+    ]);
+
+    renderExceptionsChart(exceptions.types || []);
+    renderRiskChart(exceptions.risk || []);
+    renderMonthlyChart(monthly || []);
+}
+
+
+/* -------------------- 8. DEPARTMENT DROPDOWNS -------------------- */
+
+async function loadDepartments() {
+    const departments = await api("/api/departments");
+
+    const dropdowns = ["#edept", "#tdept"];
+
+    dropdowns.forEach((selector) => {
+        const dropdown = $(selector);
+
+        if (!dropdown) return;
+
+        // Keep the existing placeholder and avoid duplicate options.
+        const existingValues = new Set(
+            Array.from(dropdown.options).map((option) => option.value)
+        );
+
+        departments.forEach((department) => {
+            if (existingValues.has(String(department))) return;
+
+            const option = document.createElement("option");
+            option.value = department;
+            option.textContent = department;
+
+            dropdown.appendChild(option);
+        });
+    });
+}
+
+
+/* -------------------- 9. TRANSACTION TABLE ROW -------------------- */
+
+function createTransactionRow(transaction, isException = false) {
+    const columns = isException
+        ? `
+            <td>${escapeHTML(transaction.Vendor_Name)}</td>
+            <td>${escapeHTML(money(transaction.Amount))}</td>
+            <td>${escapeHTML(transaction.Exception_Type)}</td>
+        `
+        : `
+            <td>${escapeHTML(transaction.Transaction_Date)}</td>
+            <td>${escapeHTML(transaction.Vendor_Name)}</td>
+            <td>${escapeHTML(transaction.Department)}</td>
+            <td>${escapeHTML(money(transaction.Amount))}</td>
+        `;
+
+    return `
+        <tr>
+            <td>${escapeHTML(transaction.Transaction_ID)}</td>
+            ${columns}
+            <td>${badge(transaction.Risk_Level)}</td>
+            <td>${Number(transaction.Risk_Score || 0).toFixed(0)}</td>
+            <td>
+                <button
+                    class="view"
+                    type="button"
+                    data-transaction-id="${escapeHTML(transaction.Transaction_ID)}"
+                >
+                    View
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+
+/* -------------------- 10. LOAD AND FILTER TRANSACTIONS -------------------- */
+
+async function loadTransactionTable(
+    targetSelector,
+    filters = {},
+    isException = false
+) {
+    const query = new URLSearchParams();
+
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+            query.set(key, value);
+        }
+    });
+
+    const transactions = await api(
+        `/api/transactions?${query.toString()}`
+    );
+
+    $(targetSelector).innerHTML = transactions
+        .map((transaction) =>
+            createTransactionRow(transaction, isException)
+        )
+        .join("");
+}
+
+
+/* -------------------- 11. TRANSACTION DETAILS MODAL -------------------- */
+
+async function openTransaction(transactionId) {
+    const transaction = await api(
+        `/api/transactions/${encodeURIComponent(transactionId)}`
+    );
+
+    $("#mtitle").textContent = transaction.Transaction_ID;
+
+    $("#mbody").innerHTML = Object.entries(transaction)
+        .map(([key, value]) => {
+            const formattedValue =
+                key === "Amount" ? money(value) : value ?? "-";
+
+            return `
+                <div class="detail">
+                    <small>
+                        ${escapeHTML(key.replaceAll("_", " "))}
+                    </small>
+                    <b>${escapeHTML(formattedValue)}</b>
+                </div>
+            `;
+        })
+        .join("");
+
+    $("#modal").classList.remove("hidden");
+}
+
+function closeModal() {
+    $("#modal").classList.add("hidden");
+}
+
+
+/* -------------------- 12. NAVIGATION -------------------- */
+
+function initializeNavigation() {
+    document.querySelectorAll("nav button").forEach((button) => {
+        button.addEventListener("click", () => {
+            document.querySelectorAll("nav button").forEach((item) => {
+                item.classList.remove("active");
+            });
+
+            document.querySelectorAll(".page").forEach((page) => {
+                page.classList.remove("active");
+            });
+
+            button.classList.add("active");
+
+            const page = $("#" + button.dataset.page);
+
+            if (page) {
+                page.classList.add("active");
+            }
+        });
+    });
+}
+
+
+/* -------------------- 13. FILTER EVENTS -------------------- */
+
+function initializeFilters() {
+    $("#efilter").addEventListener("click", () => {
+        loadTransactionTable(
+            "#etable",
+            {
+                search: $("#esearch").value,
+                risk: $("#erisk").value,
+                department: $("#edept").value,
+            },
+            true
+        ).catch(showError);
+    });
+
+    $("#tfilter").addEventListener("click", () => {
+        loadTransactionTable(
+            "#ttable",
+            {
+                search: $("#tsearch").value,
+                risk: $("#trisk").value,
+                department: $("#tdept").value,
+            },
+            false
+        ).catch(showError);
+    });
+}
+
+
+/* -------------------- 14. TABLE VIEW EVENTS -------------------- */
+
+function initializeTableEvents() {
+    // Event delegation handles View buttons after table re-rendering.
+    document.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-transaction-id]");
+
+        if (!button) return;
+
+        openTransaction(button.dataset.transactionId)
+            .catch(showError);
+    });
+}
+
+
+/* -------------------- 15. MODAL EVENTS -------------------- */
+
+function initializeModal() {
+    $("#close").addEventListener("click", closeModal);
+
+    $("#modal").addEventListener("click", (event) => {
+        if (event.target.id === "modal") {
+            closeModal();
+        }
+    });
+}
+
+
+/* -------------------- 16. VENDOR TABLE -------------------- */
+
+async function loadVendors() {
+    const vendors = await api("/api/vendors");
+
+    $("#vtable").innerHTML = vendors
+        .map((vendor) => `
+            <tr>
+                <td>${escapeHTML(vendor.Vendor_ID)}</td>
+                <td>${escapeHTML(vendor.Vendor_Name)}</td>
+                <td>${Number(vendor.Transaction_Count || 0)}</td>
+                <td>${escapeHTML(money(vendor.Total_Amount))}</td>
+            </tr>
+        `)
+        .join("");
+}
+
+
+/* -------------------- 17. REGENERATE TRANSACTIONS -------------------- */
+
+async function regenerateTransactions() {
+    const button = $("#regen");
+
+    button.disabled = true;
+
+    try {
+        await api("/api/regenerate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                rows: 10000,
+            }),
+        });
+
+        await initializeDashboard();
+    } finally {
+        button.disabled = false;
+    }
+}
+
+
+/* -------------------- 18. INITIALIZE DASHBOARD -------------------- */
+
+async function initializeDashboard() {
+    clearError();
+
+    await Promise.all([
+        loadDashboard(),
+        loadDepartments(),
+        loadTransactionTable("#etable", {}, true),
+        loadTransactionTable("#ttable", {}, false),
+        loadVendors(),
+    ]);
+}
+
+
+/* -------------------- 19. APPLICATION STARTUP -------------------- */
+
+function initializeEventListeners() {
+    initializeNavigation();
+    initializeFilters();
+    initializeTableEvents();
+    initializeModal();
+
+    $("#regen").addEventListener("click", () => {
+        regenerateTransactions().catch(showError);
+    });
+}
+
+function startApplication() {
+    initializeEventListeners();
+    initializeDashboard().catch(showError);
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startApplication);
+} else {
+    startApplication();
+}
